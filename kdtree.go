@@ -53,9 +53,9 @@ func (t *KDTree) Dim() int {
   return t.dim
 }
 
-func (t *KDTree) KNN(target Point, k int) []Point {
+func (t *KDTree) KNN(target Point, radius float64) []Point {
   hp := &kNNHeapHelper{}
-  t.search(t.root, hp, target, k)
+  t.search(t.root, hp, target, radius)
   ret := make([]Point, 0, hp.Len())
   for hp.Len() > 0 {
     item := heap.Pop(hp).(*kNNHeapNode)
@@ -69,7 +69,7 @@ func (t *KDTree) KNN(target Point, k int) []Point {
 }
 
 func (t *KDTree) search(p *kdTreeNode,
-  hp *kNNHeapHelper, target Point, k int) {
+  hp *kNNHeapHelper, target Point, radius float64) {
   stk := make([]*kdTreeNode, 0)
   for p != nil {
     stk = append(stk, p)
@@ -82,23 +82,17 @@ func (t *KDTree) search(p *kdTreeNode,
   for i := len(stk) - 1; i >= 0; i-- {
     cur := stk[i]
     dist := target.Distance(cur.splittingPoint)
-    if hp.Len() < k || (*hp)[0].distance >= dist {
+    if dist <= radius {
       heap.Push(hp, &kNNHeapNode{
         point:    cur.splittingPoint,
         distance: dist,
       })
-      if hp.Len() > k {
-        heap.Pop(hp)
-      }
     }
-    if hp.Len() < k || target.PlaneDistance(
-      cur.splittingPoint.GetValue(cur.axis), cur.axis) <=
-      (*hp)[0].distance {
-      if target.GetValue(cur.axis) < cur.splittingPoint.GetValue(cur.axis) {
-        t.search(cur.rightChild, hp, target, k)
-      } else {
-        t.search(cur.leftChild, hp, target, k)
-      }
+
+    if target.GetValue(cur.axis) < cur.splittingPoint.GetValue(cur.axis) {
+      t.search(cur.rightChild, hp, target, radius)
+    } else {
+      t.search(cur.leftChild, hp, target, radius)
     }
   }
 }
